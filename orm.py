@@ -31,12 +31,13 @@ class Source(Base):
 
 
 class db():
-    def __init__(self):
+    def __init__(self, raw_msg):
+        self.raw_msg = raw_msg
         self.session = self.get_session()
 
     # 获取session------------------------------------------------------------------
     def get_session(self):
-        logging.info('开始创建连接...')
+        self.raw_msg.append('开始创建连接...')
         # 确定主机ip及port-----------------------------------------------
         os.system('arp -a > %s' % cg.lan_path_temp)
         result = cg.web_address
@@ -77,13 +78,13 @@ class db():
             self.session.delete(obj)
         self.session.commit()
 
-    def close(self):
-        self.session.close()
-
     def query_all(self, class_name):  # 查询数据库中所有信息
         # class_name为待查表对应的类对象名称
         # filters筛选格式为：类名.属性==值
+        self.raw_msg.append('正在查询%s对象数据' % class_name)
         result = self.session.query(class_name)
-
         # 返回结果是user类组成的可迭代对象
         return result
+
+    def close(self):
+        self.session.close()
