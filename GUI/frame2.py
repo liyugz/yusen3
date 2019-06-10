@@ -2,10 +2,8 @@
 
 import tkinter as tk  # 使用Tkinter前需要先导入
 import threading
-from PrepareLessons import gather_source as gs
+from PrepareLessons import gather_source as gs, update_source_database as usd
 import transfer_message as tm
-import time
-from multiprocessing import Process
 
 
 class LabelxEntry():
@@ -31,7 +29,7 @@ class LabelxEntry():
 
     def create_entry(self):
         e = tk.Entry(self.frame, width=60, show=None)  # 显示成明文形式
-        e.grid(row=self.x, column=self.y + 1, pady=12)
+        e.grid(row=self.x, column=self.y + 1, pady=12,columnspan=5)
         return e
 
     def getwd(self):
@@ -61,7 +59,7 @@ class LabelxText():
 
     def create_Text(self):
         t = tk.Text(self.frame, width=60, height=10)
-        t.grid(row=self.x, column=self.y + 1, pady=12)
+        t.grid(row=self.x, column=self.y + 1, pady=12,columnspan=5)
         return t
 
     def getwd(self):
@@ -107,12 +105,13 @@ class MakeCourse():
         self.le2 = LabelxEntry(self.frame1, '上课时间：', 2, 0)
         self.lt1 = LabelxText(self.frame1, '课程内容：', 3, 0)
         self.b1 = Btn(self.frame1, '开始备课', 4, 1, self.handle_raw_data)
+        self.b2 = Btn(self.frame1, '更新资源', 4, 2, self.update_source)
 
         # 创建信息展示窗口
         self.msg = tk.StringVar()
         self.show_info = tk.Label(self.frame1, textvariable=self.msg, width=50, height=17, bg='black', fg='white',
                                   anchor='nw', justify='left', font=('宋体', 10))
-        self.show_info.grid(row=1, column=2, pady=12, rowspan=5, sticky=tk.N, padx=50)
+        self.show_info.grid(row=1, column=6, pady=12, rowspan=5, sticky=tk.N, padx=50)
         self.show_info.after(1000, self.get_msg)
 
         tm.current_frame.append(self)
@@ -126,9 +125,13 @@ class MakeCourse():
 
     def handle_raw_data(self):
         raw_data = self.get_raw_data()
+        usd.Source(self.db, self.raw_msg)
         t1 = threading.Thread(target=gs.CourceNode, args=(raw_data, self.raw_msg, self.db))
         t1.start()
         t1.join()
+
+    def update_source(self):
+        usd.Source(self.db, self.raw_msg)
 
     def get_msg(self):
         info_str = '\n'.join(self.raw_msg)

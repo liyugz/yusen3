@@ -6,7 +6,9 @@ import transfer_message as tm
 
 
 class Tab():
-    def __init__(self, window):
+    def __init__(self, window, db, raw_msg):
+        self.raw_msg = raw_msg
+        self.db = db
         self.window = window
         self.frame = tk.Frame(window, height=300, width=600)
         self.frame.grid(row=0, column=0, columnspan=6)
@@ -25,7 +27,9 @@ class Tab():
         for ch in tm.current_frame:
             ch.destory()
         tm.current_frame.clear()
-        f2.MakeCourse(self.window)
+        self.raw_msg.clear()
+        self.raw_msg.append('已连接数据库')
+        f2.MakeCourse(self.window, self.db, self.raw_msg)
 
     def command2(self):
         print('ok')

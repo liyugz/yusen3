@@ -1,5 +1,5 @@
 # 操作数据库
-from sqlalchemy import Column, String, DateTime, create_engine
+from sqlalchemy import Column, String, DateTime, create_engine, Date, ForeignKey, Float
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 import os
@@ -30,6 +30,60 @@ class Source(Base):
     date_time = Column(DateTime(), primary_key=True)
 
 
+class Course(Base):
+    # 表的名字
+    __tablename__ = 'course'
+
+    # 表的结构
+    course_code = Column(String(255), primary_key=True)
+    new_class_code = Column(String(255), ForeignKey("new_class.new_class_code"))
+    real_class_time = Column(String(255))
+    source_code = Column(String(255))
+    class_time = Column(Date())
+
+
+class NewClass(Base):
+    # 表的名字
+    __tablename__ = 'new_class'
+
+    # 表的结构
+    new_class_code = Column(String(255), primary_key=True)
+    appointed_time = Column(String(255))
+    class_type = Column(String(255))
+    teach_address = Column(String(255))
+    teach_class = Column(String(255))
+    grade = Column(String(255))
+    create_time = Column(String(255))
+
+
+class Score(Base):
+    # 表的名字
+    __tablename__ = 'score'
+
+    # 表的结构
+    student_code = Column(String(255), ForeignKey("student.student_code"), primary_key=True)
+    course_code = Column(String(255), ForeignKey("course.course_code"), primary_key=True)
+    on_class = Column(String(255))
+    score1 = Column(Float(7, 3))
+    score2 = Column(Float(7, 3))
+    judge = Column(String(255))
+
+
+class Student(Base):
+    # 表的名字
+    __tablename__ = 'student'
+
+    # 表的结构
+    student_code = Column(String(255), primary_key=True)
+    school = Column(String(255))
+    name = Column(String(255))
+    grade = Column(String(255))
+    class1 = Column(String(255))
+    new_class_code = Column(String(255), ForeignKey("new_class.new_class_code"))
+    team = Column(String(255))
+    status = Column(String(255))
+
+
 class db():
     def __init__(self, raw_msg):
         self.raw_msg = raw_msg
@@ -55,11 +109,14 @@ class db():
         port = 3306  # 部署时删除
 
         # 返回session----------------------------------------------------
-        engine = create_engine(
+        self.engine = create_engine(
             'mysql+mysqlconnector://%s:%s@%s:%d/%s' % (cg.user, cg.password, result, port, cg.db_name))
 
-        DBSession = sessionmaker(bind=engine)
+        DBSession = sessionmaker(bind=self.engine)
         session = DBSession()
+
+        self.create_tables()
+
         return session
 
     def insert(self, *objs):  # insert函数
@@ -81,10 +138,14 @@ class db():
     def query_all(self, class_name):  # 查询数据库中所有信息
         # class_name为待查表对应的类对象名称
         # filters筛选格式为：类名.属性==值
-        self.raw_msg.append('正在查询%s对象数据' % class_name)
+        # self.raw_msg.append('正在查询%s对象数据' % class_name)
         result = self.session.query(class_name)
         # 返回结果是user类组成的可迭代对象
         return result
 
     def close(self):
         self.session.close()
+
+    def create_tables(self):
+        self.raw_msg.append('正在创建数据表...')
+        Base.metadata.create_all(self.engine)

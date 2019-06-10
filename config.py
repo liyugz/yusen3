@@ -33,3 +33,6 @@ web_address = r'233c82s257.51mypc.cn'
 
 # 外网服务端口
 web_port = 13861
+
+# 调集资源时可以调集的资源后缀
+source_suffix = ['pptx', 'docx']

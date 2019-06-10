@@ -10,22 +10,25 @@ import orm
 
 
 class Source():
-    def __init__(self):
+    def __init__(self,db,raw_msg):
         self.root = cg.source_path
         self.operation_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
         self.source_data_list = []  # 存放待插入的source数据
-        self.db = orm.db()
+        self.db = db
+        self.raw_msg=raw_msg
 
         # 初始化之后自动运行---------------------------------------------------------------------------------------------
         # 清空数据表
         self.db.clear_table(orm.Source)
 
         # 搜索并写数据表
+        self.raw_msg.append('遍历资源文件夹')
         readme_paths = self.walk_source_folder()
         for readme_path in readme_paths:
             readme_dic = self.parse_readme(readme_path)
             self.gather_source_data(readme_dic)
 
+        self.raw_msg.append('向数据库中插入数据')
         self.write2database(self.source_data_list)
         self.db.close()
 
@@ -112,7 +115,3 @@ class Source():
         '''
         result = '/'.join(readme_x_list)
         return result
-
-
-if __name__ == '__main__':
-    Source()
