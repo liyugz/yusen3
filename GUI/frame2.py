@@ -4,6 +4,39 @@ import tkinter as tk  # 使用Tkinter前需要先导入
 import threading
 from PrepareLessons import gather_source as gs, update_source_database as usd
 import transfer_message as tm
+from tkinter import ttk
+import orm
+
+
+class LabelxCombobox():
+    def __init__(self, frame, label_text, x, y, listx):
+        '''
+        window:附着的窗口
+        label_text:label控件显示的文本
+        x:联合组件距离窗口左部边缘的距离
+        y:联合组件距离窗口顶部边缘的距离
+        '''
+        self.frame = frame
+        self.label_text = label_text
+        self.x = x
+        self.y = y
+
+        self.label = self.create_label()
+        self.cmb = self.create_combobox(listx)
+
+    def create_label(self):
+        l = tk.Label(self.frame, text=self.label_text, font=('Times New Roman', 12), width=10, height=1, anchor='e')
+        l.grid(row=self.x, column=self.y, pady=12, padx=20)
+        return l
+
+    def create_combobox(self, listx):
+        e = ttk.Combobox(self.frame, width=60, show=None)  # 显示成明文形式
+        e['values'] = listx
+        e.grid(row=self.x, column=self.y + 1, pady=12, columnspan=5)
+        return e
+
+    def getwd(self):
+        return self.cmb.get()
 
 
 class LabelxEntry():
@@ -23,13 +56,13 @@ class LabelxEntry():
         self.entry = self.create_entry()
 
     def create_label(self):
-        l = tk.Label(self.frame, text=self.label_text, font=('宋体', 12), width=10, height=1, anchor='e')
+        l = tk.Label(self.frame, text=self.label_text, font=('Times New Roman', 12), width=10, height=1, anchor='e')
         l.grid(row=self.x, column=self.y, pady=12, padx=20)
         return l
 
     def create_entry(self):
         e = tk.Entry(self.frame, width=60, show=None)  # 显示成明文形式
-        e.grid(row=self.x, column=self.y + 1, pady=12,columnspan=5)
+        e.grid(row=self.x, column=self.y + 1, pady=12, columnspan=5)
         return e
 
     def getwd(self):
@@ -53,13 +86,13 @@ class LabelxText():
         self.text = self.create_Text()
 
     def create_Label(self):
-        l = tk.Label(self.frame, text=self.label_text, font=('宋体', 12), width=10, height=1, anchor='e')
+        l = tk.Label(self.frame, text=self.label_text, font=('Times New Roman', 12), width=10, height=1, anchor='e')
         l.grid(row=self.x, column=self.y, pady=12, sticky=tk.N, padx=20)
         return l
 
     def create_Text(self):
         t = tk.Text(self.frame, width=60, height=10)
-        t.grid(row=self.x, column=self.y + 1, pady=12,columnspan=5)
+        t.grid(row=self.x, column=self.y + 1, pady=12, columnspan=5)
         return t
 
     def getwd(self):
@@ -87,7 +120,7 @@ class Btn():
 
     def create_button(self, frame, btn_text, x, y, fun):
         b1 = tk.Button(frame, text=btn_text, width=10,
-                       height=2, command=fun)
+                       height=2, command=fun, font=('Times New Roman', 11))
         b1.grid(row=x, column=y, sticky=tk.W, pady=10)
         return b1
 
@@ -109,9 +142,12 @@ class MakeCourse():
 
         # 创建信息展示窗口
         self.msg = tk.StringVar()
-        self.show_info = tk.Label(self.frame1, textvariable=self.msg, width=50, height=17, bg='black', fg='white',
-                                  anchor='nw', justify='left', font=('宋体', 10))
+        self.show_info = tk.Text(self.frame1, width=50, height=17, bg='white', fg='#0000FF',
+                                 font=('Times New Roman', 11))
         self.show_info.grid(row=1, column=6, pady=12, rowspan=5, sticky=tk.N, padx=50)
+        label_on_info = tk.Label(self.frame1, text='滚动信息窗口', font=('宋体', 11, 'bold'), width=11,
+                                 height=1, anchor='w', fg='#0000FF')
+        label_on_info.grid(row=0, column=6, sticky=tk.W, padx=45)
         self.show_info.after(1000, self.get_msg)
 
         tm.current_frame.append(self)
@@ -134,9 +170,15 @@ class MakeCourse():
         usd.Source(self.db, self.raw_msg)
 
     def get_msg(self):
-        info_str = '\n'.join(self.raw_msg)
-        self.msg.set(info_str)
+        info_str = '\ninfoline：'.join(self.raw_msg)
+        info_str = 'infoline：' + info_str
+        self.show_info.delete(0.0, tk.END)
+        self.show_info.insert('insert', info_str)
         self.show_info.after(1000, self.get_msg)
+
+    def get_class_info(self):
+        list = self.db.query_all(orm.NewClass.new_class_code)
+        return list
 
     def destory(self):
         self.frame1.destroy()

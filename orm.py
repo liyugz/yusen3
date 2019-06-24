@@ -4,6 +4,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 import os
 import logging
+import datetime
+import time
 
 import config  as cg
 import common_parameters as cp
@@ -37,7 +39,6 @@ class Course(Base):
     # 表的结构
     course_code = Column(String(255), primary_key=True)
     new_class_code = Column(String(255), ForeignKey("new_class.new_class_code"))
-    real_class_time = Column(String(255))
     source_code = Column(String(255))
     class_time = Column(Date())
 
@@ -91,7 +92,7 @@ class db():
 
     # 获取session------------------------------------------------------------------
     def get_session(self):
-        self.raw_msg.append('开始创建连接...')
+        self.raw_msg.insert(0,'开始创建连接...')
         # 确定主机ip及port-----------------------------------------------
         os.system('arp -a > %s' % cg.lan_path_temp)
         result = cg.web_address
@@ -147,5 +148,78 @@ class db():
         self.session.close()
 
     def create_tables(self):
-        self.raw_msg.append('正在创建数据表...')
+        self.raw_msg.insert(0,'正在创建数据表...')
         Base.metadata.create_all(self.engine)
+
+    def query(self, class_name, filter_sentence, rank):  # 筛选查询数据库中的信息
+        result = self.session.query(class_name).filter(filter_sentence).order_by(rank)
+        return result
+
+
+class myTime():
+    def __init__(self, raw_time, msg):
+        self.msg = msg
+        self.raw_time = raw_time
+        if len(raw_time) == 8:
+            date_fin = self.ver8()[0]
+            time4floder = self.ver8()[1]
+        elif len(raw_time) == 9:
+            date_fin = self.ver9()
+            time4floder = ''
+        elif len(raw_time) == 1:
+            date_fin = self.ver1()[0]
+            time4floder = self.ver1()[1]
+        else:
+            self.msg.insert(0,'时间格式出错，请检查')
+            date_fin = ''
+            time4floder = ''
+
+        self.time = date_fin
+        self.time4floder = time4floder
+
+    def ver8(self):
+        year = int(self.raw_time[0:4])
+        month = int(self.raw_time[4:6])
+        day = int(self.raw_time[6:])
+
+        dt_obj = datetime.datetime(year, month, day, 0, 0, 0)
+        return (dt_obj.strftime('%Y-%m-%d'), self.raw_time)
+
+    def ver9(self):
+        weekday_chinese = ['一', '二', '三', '四', '五', '六', '天']
+
+        weekday = weekday_chinese[int(self.raw_time[0:1]) - 1]
+        hour1 = self.raw_time[1:3]
+        min1 = self.raw_time[3:5]
+
+        hour2 = self.raw_time[5:7]
+        min2 = self.raw_time[7:]
+
+        return "星期%s %s：%s-%s：%s" % (weekday, hour1, min1, hour2, min2)
+
+    def ver1(self):
+        weekday_chinese = ['一', '二', '三', '四', '五', '六', '天', '七']
+        weekday_english = ['1', '2', '3', '4', '5', '6', '7']
+        raw_time = str(self.raw_time)
+        today = datetime.datetime.now()
+        now = time.localtime()
+        if raw_time in weekday_chinese:  # 返回下一个星期X的日期
+            now_weekday = int(time.strftime("%w", now))
+            future_weekday_index = weekday_chinese.index(raw_time)
+            if future_weekday_index == 7:
+                future_weekday_index = 6
+            future_weekday = int(weekday_english[future_weekday_index])
+            daydiff = future_weekday - now_weekday
+            if daydiff >= 0:
+                delta = datetime.timedelta(days=daydiff)
+                n_days = today + delta
+                return (n_days.strftime('%Y-%m-%d'), n_days.strftime('%Y%m%d'))
+            else:
+                daydiff1 = 7 - now_weekday + future_weekday
+                delta = datetime.timedelta(days=daydiff1)
+                n_days = today + delta
+                return (n_days.strftime('%Y-%m-%d'), n_days.strftime('%Y%m%d'))
+        elif raw_time in weekday_english:  # 返回X天后的日期
+            delta = datetime.timedelta(days=int(raw_time))
+            n_days = today + delta
+            return (n_days.strftime('%Y-%m-%d'), n_days.strftime('%Y%m%d'))

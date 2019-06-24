@@ -5,7 +5,7 @@ import frame1 as f1
 import frame2 as f2
 
 
-class MainWindow():
+class App():
     def __init__(self):
         self.window = tk.Tk()
         self.window.title('yusen')
@@ -23,4 +23,4 @@ class MainWindow():
 
 
 if __name__ == '__main__':
-    MainWindow()
+    App()

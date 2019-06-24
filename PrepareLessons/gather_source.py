@@ -27,6 +27,7 @@ class CourceNode():
         # -----------------------------------------------------------------以下函数尽在调试阶段出现-----------------------
         print(self.get_history_floder(self.new_class_code[0], self.class_time[0]))
         print(self.__create_gather_list())
+        pythoncom.CoInitialize()
         self.do_gather()
 
     def __del_blank_space(self, listx):
@@ -94,19 +95,39 @@ class CourceNode():
         gather_list = self.__create_gather_list()
         for item in gather_list:
             # item表示一个调集单
-            new_class_time = item['new_class_code']
+            new_class_code = item['new_class_code']
             class_time = item['class_time']
             source_info = item['source_info']
-            target_dir = self.get_history_floder(new_class_time, class_time)
+            target_dir = self.get_history_floder(new_class_code, class_time)
+            bad_list = []  # 未调集成功的资源项目清单
+            work_dic = {}  # 调集成功的资源项目，一个资源项目可能存在多个文件，所以项目名称为key，列表为value，value是资源文件的集合
             for ch in source_info:
                 # ch 代表一个调集单中的一项，如 ('并列不当', 'C:\\Users\\liyu\\Desktop\\李老师\\标准资料\\101病句\\10105')
-                if ch[1] != None:
-                    for file in os.listdir(ch[1]):
+                if ch[1] != None:  # 表示找到了文件地址，文件存在
+                    work_dic[ch[0]] = []
+                    for file in os.listdir(ch[1]):  # 列出文件夹下所有文件
                         if not os.path.isdir(os.path.join(ch[1], file)):  # 排除文件夹
                             if (file.split('.')[1] in cg.source_suffix) and (file[:2] != '~$'):  # 选中指定格式文件，滤除临时文件
-                                self.set_shortcut(os.path.join(ch[1], file), os.path.join(target_dir, file))  # 778280
+                                self.set_shortcut(os.path.join(ch[1], file), os.path.join(target_dir, file))
+                                work_dic[ch[0]].append(file)
+                else:
+                    bad_list.append(ch[0])
             # 把记录写入课程表
-            self.msg.append(self.save_course())
+            if not len(bad_list) > 0:
+                course_code = self.__get_course_code(new_class_code)
+                source_code = self.__get_source(work_dic)
+                class_time = orm.myTime(class_time, self.msg).time  # 778280
+                self.msg.insert(0,
+                                self.save_course(course_code, new_class_code, source_code, class_time))
+            else:
+                str1 = '%s班调集资源未全部完成，没有写入课程记录，失败资源如下：' % new_class_code
+                self.msg.append(str1)
+                for ch in bad_list:
+                    self.msg.insert(0,ch)
+
+    def __get_source(self, workdic):  # 把调集到的课程变成字符串
+        source_list = list(workdic.keys())
+        return '//'.join(source_list)
 
     def get_history_floder(self, new_class_code, class_time):  # 根据班号获取班级文件夹所在地址，同时根据时间创建上课文件夹
         floders = os.listdir(cg.history_path)
@@ -117,13 +138,21 @@ class CourceNode():
                     for time_floder in os.listdir(class_floder_path):
                         if time_floder == class_time:  # 找到class_time文件夹
                             return os.path.join(class_floder_path, time_floder)
-                    class_time_floder = os.path.join(class_floder_path, class_time)
-                    os.mkdir(class_time_floder)  # 创建不存在的文件夹
+                    class_time_floder = os.path.join(class_floder_path, orm.myTime(class_time, self.msg).time4floder)
+                    try:
+                        os.mkdir(class_time_floder)  # 创建不存在的文件夹
+                    except:
+                        self.msg.insert(0, '文件夹已经存在')
                     return class_time_floder
         return None
 
-    def save_course(self):
-        pass
+    def save_course(self, course_code, new_class_code, source_code, class_time):  # 向数据库中写入课程信息
+        course_list = []
+        course_list.append(
+            orm.Course(course_code=course_code, new_class_code=new_class_code, source_code=source_code,
+                       class_time=class_time))
+        self.db.insert(*course_list)
+        return '%s班新增课程信息成功：%s' % (new_class_code, source_code)
 
     def set_shortcut(self, filename, lnkname):  # 如无需特别设置图标，则可去掉iconname参数，创建超链接
         shortcut = pythoncom.CoCreateInstance(
@@ -134,3 +163,11 @@ class CourceNode():
         if os.path.splitext(lnkname)[-1] != '.lnk':
             lnkname += ".lnk"
         shortcut.QueryInterface(pythoncom.IID_IPersistFile).Save(lnkname, 0)
+
+    def __get_course_code(self, new_class_code):  # 构造课程信息的course_code项
+        data = self.db.query(orm.Course.course_code, orm.Course.new_class_code == new_class_code,
+                             orm.Course.course_code)
+        if data.count() == 0:
+            return str(new_class_code) + '001'
+        else:
+            return str(int(data[-1][0]) + 1)

@@ -22,13 +22,13 @@ class Source():
         self.db.clear_table(orm.Source)
 
         # 搜索并写数据表
-        self.raw_msg.append('遍历资源文件夹')
+        self.raw_msg.insert(0,'遍历资源文件夹')
         readme_paths = self.walk_source_folder()
         for readme_path in readme_paths:
             readme_dic = self.parse_readme(readme_path)
             self.gather_source_data(readme_dic)
 
-        self.raw_msg.append('向数据库中插入数据')
+        self.raw_msg.insert(0,'向数据库中插入数据')
         self.write2database(self.source_data_list)
         self.db.close()
 
